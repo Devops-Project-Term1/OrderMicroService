@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orderservice-db
+    environment:
+      POSTGRES_USER: orderservice_user
+      POSTGRES_PASSWORD: orderservice_password
+      POSTGRES_DB: orderservice_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orderservice_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orderservice-network
+
+  orderservice:
+    build:
+      context: ./OrderService
+      dockerfile: Dockerfile
+    container_name: orderservice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=orderservice_db;Username=orderservice_user;Password=orderservice_password;"
+      JwtSettings__SecretKey: "ThisIsASecretKeyThatShouldBeVeryLongAndSecure123!"
+      JwtSettings__Issuer: "AuthService"
+      JwtSettings__Audience: "OrderService"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orderservice-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  orderservice-network:
+    driver: bridge
