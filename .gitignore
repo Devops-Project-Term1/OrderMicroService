@@ -1,0 +1,47 @@
+#-----------------------------------------------------------------------------------
+# Visual Studio and Build Artifacts
+#-----------------------------------------------------------------------------------
+## VS Code / Visual Studio
+.vs/
+*.user
+*.userfiles
+*.suo
+
+## Build Results
+[Bb]in/
+[Oo]bj/
+*.pdb
+*.orig
+*.opb
+
+## Debug/Test Files
+*.trx
+*.coverage
+*.log
+*.pfx
+*.zip
+*.nupkg
+
+#-----------------------------------------------------------------------------------
+# IDE and Dependencies
+#-----------------------------------------------------------------------------------
+## NuGet Packages
+packages/
+*.nupkg
+.nuget/
+project.lock.json
+
+## Rider/ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+#-----------------------------------------------------------------------------------
+# Databases and Secrets
+#-----------------------------------------------------------------------------------
+## Local Databases
+*.mdf
+*.ldf
+*.db
+
+## Local Configuration (Prevents committing sensitive local settings)
+appsettings.Local.json
