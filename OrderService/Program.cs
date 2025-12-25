@@ -1,9 +1,13 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OrderService.Data;
 using OrderService.Services;
+using OrderService.Authorization;
+using OrderService.Middleware;
+using OrderService.Utilities;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -20,6 +24,12 @@ builder.Services.AddDbContext<OrderDbContext>(options =>
 
 // 2. Register Services
 builder.Services.AddScoped<IOrderService, OrderService.Services.OrderService>();
+builder.Services.AddScoped<JwtTokenValidator>();
+builder.Services.AddHttpContextAccessor();
+
+// Register Authorization Handlers
+builder.Services.AddScoped<IAuthorizationHandler, JwtAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, OwnerAuthorizationHandler>();
 
 // 3. OpenTelemetry Configuration
 var serviceName = "OrderService";
@@ -98,6 +108,19 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(secretKey)
     };
+});
+
+// 6. Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.Requirements.Add(new RoleRequirement("Admin")));
+    
+    options.AddPolicy("UserOrAdmin", policy =>
+        policy.Requirements.Add(new RoleRequirement("User", "Admin")));
+    
+    options.AddPolicy("OwnerOnly", policy =>
+        policy.Requirements.Add(new OwnerRequirement()));
 });
 
 builder.Services.AddControllers();
