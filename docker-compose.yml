@@ -44,8 +44,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5000
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=inventory_db;Username=orderservice_user;Password=orderservice_password"
-      JwtSettings__SecretKey: "ThisIsASecretKeyThatShouldBeVeryLongAndSecure123!"
-      JwtSettings__Issuer: "AuthService"
+      JwtSettings__SecretKey: "superkey123-50yen"
+      JwtSettings__Issuer: "authservice"
       JwtSettings__Audience: "OrderService"
       OpenTelemetry__OtlpEndpoint: "http://jaeger:4317"
     ports:

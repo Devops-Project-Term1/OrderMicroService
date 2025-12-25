@@ -1,0 +1,268 @@
+@page "/"
+@using OrderUI.Models
+@using OrderUI.Services
+@inject OrderService OrderService
+
+<div class="container">
+    <h1>📦 Order Management System</h1>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error">
+            <strong>Error:</strong> @errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="success">
+            <strong>Success:</strong> @successMessage
+        </div>
+    }
+
+    <!-- Create/Edit Order Form -->
+    <div style="margin-bottom: 30px;">
+        <h2>@(editingOrder != null ? "Edit Order" : "Create New Order")</h2>
+        <div class="form-group">
+            <label>Product ID</label>
+            <input type="number" @bind="currentOrder.ProductId" placeholder="Enter product ID" />
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" @bind="currentOrder.Quantity" placeholder="Enter quantity" />
+        </div>
+        <div class="form-group">
+            <label>Total Price</label>
+            <input type="number" step="0.01" @bind="currentOrder.TotalPrice" placeholder="Enter total price" />
+        </div>
+        <div class="form-group">
+            <label>User ID</label>
+            <input type="text" @bind="currentOrder.UserId" placeholder="Enter user ID" />
+        </div>
+        <div class="form-actions">
+            @if (editingOrder != null)
+            {
+                <button class="btn btn-primary" @onclick="UpdateOrder">Update Order</button>
+                <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="CreateOrder">Create Order</button>
+            }
+        </div>
+    </div>
+
+    <!-- Orders List -->
+    <div>
+        <h2>All Orders</h2>
+        
+        @if (loading)
+        {
+            <div class="loading">Loading orders...</div>
+        }
+        else if (orders == null || !orders.Any())
+        {
+            <div class="no-orders">No orders found. Create your first order above!</div>
+        }
+        else
+        {
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Product ID</th>
+                        <th>Quantity</th>
+                        <th>Total Price</th>
+                        <th>Order Date</th>
+                        <th>User ID</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in orders)
+                    {
+                        <tr>
+                            <td>@order.Id</td>
+                            <td>@order.ProductId</td>
+                            <td>@order.Quantity</td>
+                            <td>$@order.TotalPrice.ToString("F2")</td>
+                            <td>@order.OrderDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@order.UserId</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-primary" @onclick="() => EditOrder(order)">Edit</button>
+                                    <button class="btn btn-danger" @onclick="() => DeleteOrder(order.Id)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Order> orders = new();
+    private Order currentOrder = new();
+    private Order? editingOrder = null;
+    private bool loading = true;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        loading = true;
+        ClearMessages();
+        try
+        {
+            orders = await OrderService.GetAllOrdersAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load orders: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task CreateOrder()
+    {
+        ClearMessages();
+        try
+        {
+            if (ValidateOrder())
+            {
+                var created = await OrderService.CreateOrderAsync(currentOrder);
+                if (created != null)
+                {
+                    successMessage = $"Order #{created.Id} created successfully!";
+                    currentOrder = new Order();
+                    await LoadOrders();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to create order: {ex.Message}";
+        }
+    }
+
+    private void EditOrder(Order order)
+    {
+        editingOrder = order;
+        currentOrder = new Order
+        {
+            Id = order.Id,
+            ProductId = order.ProductId,
+            Quantity = order.Quantity,
+            TotalPrice = order.TotalPrice,
+            UserId = order.UserId,
+            OrderDate = order.OrderDate
+        };
+        ClearMessages();
+    }
+
+    private async Task UpdateOrder()
+    {
+        ClearMessages();
+        try
+        {
+            if (editingOrder != null && ValidateOrder())
+            {
+                var success = await OrderService.UpdateOrderAsync(editingOrder.Id, currentOrder);
+                if (success)
+                {
+                    successMessage = $"Order #{editingOrder.Id} updated successfully!";
+                    CancelEdit();
+                    await LoadOrders();
+                }
+                else
+                {
+                    errorMessage = "Failed to update order";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to update order: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteOrder(int id)
+    {
+        if (confirm($"Are you sure you want to delete order #{id}?"))
+        {
+            ClearMessages();
+            try
+            {
+                var success = await OrderService.DeleteOrderAsync(id);
+                if (success)
+                {
+                    successMessage = $"Order #{id} deleted successfully!";
+                    await LoadOrders();
+                }
+                else
+                {
+                    errorMessage = "Failed to delete order";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to delete order: {ex.Message}";
+            }
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingOrder = null;
+        currentOrder = new Order();
+        ClearMessages();
+    }
+
+    private bool ValidateOrder()
+    {
+        if (currentOrder.ProductId <= 0)
+        {
+            errorMessage = "Product ID must be greater than 0";
+            return false;
+        }
+        if (currentOrder.Quantity <= 0)
+        {
+            errorMessage = "Quantity must be greater than 0";
+            return false;
+        }
+        if (currentOrder.TotalPrice <= 0)
+        {
+            errorMessage = "Total Price must be greater than 0";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(currentOrder.UserId))
+        {
+            errorMessage = "User ID is required";
+            return false;
+        }
+        return true;
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private bool confirm(string message)
+    {
+        // In a real application, you would use a proper confirmation dialog
+        // For now, we'll return true (you can integrate a modal component)
+        return true;
+    }
+}

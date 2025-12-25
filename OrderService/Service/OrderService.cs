@@ -30,6 +30,21 @@ public class OrderService : IOrderService
         return order;
     }
 
+    public async Task<Order?> UpdateOrderAsync(int id, Order order)
+    {
+        var existingOrder = await _context.Orders.FindAsync(id);
+        if (existingOrder == null) return null;
+
+        existingOrder.ProductId = order.ProductId;
+        existingOrder.Quantity = order.Quantity;
+        existingOrder.TotalPrice = order.TotalPrice;
+        existingOrder.UserId = order.UserId;
+        existingOrder.OrderDate = order.OrderDate;
+
+        await _context.SaveChangesAsync();
+        return existingOrder;
+    }
+
     public async Task<bool> DeleteOrderAsync(int id)
     {
         var order = await _context.Orders.FindAsync(id);

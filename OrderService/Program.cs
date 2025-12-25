@@ -84,13 +84,19 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials();
     });
+    options.AddPolicy("AllowBlazorApp",
+        policy => policy.WithOrigins("http://localhost:5001")
+            .AllowAnyMethod().AllowAnyHeader());
 });
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseCors("AllowBlazorApp");
 
 // Apply migrations automatically on startup
 using (var scope = app.Services.CreateScope())
