@@ -29,9 +29,17 @@ jobs:
       run: dotnet restore
       working-directory: ./OrderService
     
+    - name: Restore test dependencies
+      run: dotnet restore
+      working-directory: ./OrderService.Tests
+    
     - name: Build
       run: dotnet build --configuration Release --no-restore
       working-directory: ./OrderService
+    
+    - name: Build tests
+      run: dotnet build --configuration Release --no-restore
+      working-directory: ./OrderService.Tests
     
     - name: Run unit tests
       run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
