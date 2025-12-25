@@ -50,7 +50,7 @@ jobs:
       with:
         name: Test Results
         path: '**/test-results.trx'
-        reporter: 'dotnet trx'
+        reporter: 'dotnet-trx'
     
     - name: Code coverage
       run: dotnet test --configuration Release --no-build /p:CollectCoverage=true /p:CoverageFormat=opencover
