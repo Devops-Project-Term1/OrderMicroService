@@ -1,9 +1,17 @@
 # OrderService API - PowerShell Commands
 # Base URL - Update this to match your environment
-$BaseUrl = "http://localhost:5247"
+$BaseUrl = "http://localhost:5000"
 
-# JWT Token from Auth Service - Replace with your actual token
-$Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlRlc3QgVXNlciIsImlzcyI6IkF1dGhTZXJ2aWNlIiwiYXVkIjoiT3JkZXJTZXJ2aWNlIiwiaWF0IjoxNTE2MjM5MDIyfQ.Wde4H-HMJ0_3R4niHdX7y4BPOxvFYlHtbjIKRhhYWK8"
+# JWT Token from Auth Service - Get fresh token with login first
+$AuthUrl = "http://localhost:3000/auth/login"
+$LoginBody = @{
+    email = "admin@orderservice.com"
+    password = "Admin@123"
+} | ConvertTo-Json
+
+$AuthResponse = Invoke-RestMethod -Uri $AuthUrl -Method POST -ContentType "application/json" -Body $LoginBody
+$Token = $AuthResponse.data.token
+Write-Host "Token obtained: $Token" -ForegroundColor Yellow
 
 # Trust self-signed certificates
 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
@@ -13,7 +21,7 @@ $Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZ
 # ============================================
 Write-Host "=== CREATE Order ===" -ForegroundColor Green
 $CreateBody = @{
-    productId = "PROD-001"
+    productId = 101
     quantity = 5
     totalPrice = 99.99
 } | ConvertTo-Json

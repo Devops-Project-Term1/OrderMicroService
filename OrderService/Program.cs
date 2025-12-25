@@ -1,13 +1,6 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using OrderService.Data;
 using OrderService.Services;
-using OrderService.Authorization;
-using OrderService.Middleware;
-using OrderService.Utilities;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -24,12 +17,6 @@ builder.Services.AddDbContext<OrderDbContext>(options =>
 
 // 2. Register Services
 builder.Services.AddScoped<IOrderService, OrderService.Services.OrderService>();
-builder.Services.AddScoped<JwtTokenValidator>();
-builder.Services.AddHttpContextAccessor();
-
-// Register Authorization Handlers
-builder.Services.AddScoped<IAuthorizationHandler, JwtAuthorizationHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, OwnerAuthorizationHandler>();
 
 // 3. OpenTelemetry Configuration
 var serviceName = "OrderService";
@@ -87,40 +74,16 @@ builder.Logging.AddOpenTelemetry(logging =>
     });
 });
 
-// 5. JWT Authentication Configuration
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
-
-builder.Services.AddAuthentication(options =>
+// 5. CORS Configuration
+builder.Services.AddCors(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    options.AddDefaultPolicy(policy =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(secretKey)
-    };
-});
-
-// 6. Authorization Policies
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminOnly", policy =>
-        policy.Requirements.Add(new RoleRequirement("Admin")));
-    
-    options.AddPolicy("UserOrAdmin", policy =>
-        policy.Requirements.Add(new RoleRequirement("User", "Admin")));
-    
-    options.AddPolicy("OwnerOnly", policy =>
-        policy.Requirements.Add(new OwnerRequirement()));
+        policy.WithOrigins("http://localhost:5000")
+              .WithMethods("POST", "GET", "PUT", "PATCH", "DELETE")
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
 });
 
 builder.Services.AddControllers();
@@ -153,10 +116,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 4. Enable Auth Middleware
-app.UseAuthentication(); 
-app.UseAuthorization();
+// Middleware Pipeline
+app.UseCors();
 
+// Controllers/Routes
 app.MapControllers();
 
 app.Run();

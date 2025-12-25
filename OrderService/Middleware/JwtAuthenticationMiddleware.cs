@@ -96,14 +96,14 @@ public class JwtAuthenticationMiddleware
         var tokenHandler = new JwtSecurityTokenHandler();
         var validationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
+            ValidateIssuer = false,
+            ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(secretKey),
-            ClockSkew = TimeSpan.Zero // Remove default 5 minute clock skew
+            ClockSkew = TimeSpan.Zero, // Remove default 5 minute clock skew
+            NameClaimType = "username",
+            RoleClaimType = "role"
         };
 
         var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
@@ -113,6 +113,23 @@ public class JwtAuthenticationMiddleware
             !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
         {
             throw new SecurityTokenException("Invalid token algorithm");
+        }
+
+        // Map 'id' claim to NameIdentifier for consistency
+        var claimsIdentity = principal.Identity as ClaimsIdentity;
+        if (claimsIdentity != null)
+        {
+            var idClaim = claimsIdentity.FindFirst("id");
+            if (idClaim != null && !claimsIdentity.HasClaim(ClaimTypes.NameIdentifier, idClaim.Value))
+            {
+                claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, idClaim.Value));
+            }
+            
+            var emailClaim = claimsIdentity.FindFirst("email");
+            if (emailClaim != null && !claimsIdentity.HasClaim(ClaimTypes.Email, emailClaim.Value))
+            {
+                claimsIdentity.AddClaim(new Claim(ClaimTypes.Email, emailClaim.Value));
+            }
         }
 
         return principal;
