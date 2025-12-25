@@ -1,16 +1,17 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
-WORKDIR /app
+WORKDIR /src
 
-# Copy project file and restore dependencies (for better layer caching)
-COPY *.csproj ./
-RUN dotnet restore
+# Copy project file and restore dependencies (build context is repo root)
+COPY ["OrderService/OrderService.csproj", "OrderService/"]
+RUN dotnet restore "OrderService/OrderService.csproj"
 
 # Copy remaining source files
-COPY . ./
+COPY OrderService/ OrderService/
 
 # Build and publish
+WORKDIR /src/OrderService
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage
