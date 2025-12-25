@@ -8,6 +8,11 @@ using System.Text.Json;
 using Xunit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.TestHost;
+using System.Security.Claims;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 public class ControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -25,7 +30,7 @@ public class ControllerTests : IClassFixture<WebApplicationFactory<Program>>
                 }!);
             });
             
-            builder.ConfigureServices(services =>
+            builder.ConfigureTestServices(services =>
             {
                 // Remove EntityFrameworkCore services registered with PostgreSQL
                 var descriptors = services.Where(d =>
@@ -41,6 +46,21 @@ public class ControllerTests : IClassFixture<WebApplicationFactory<Program>>
                 services.AddDbContext<OrderDbContext>(options =>
                     options.UseInMemoryDatabase("TestOrdersDbForController"),
                     ServiceLifetime.Scoped);
+
+                // Remove JwtBearer authentication
+                var authService = services.FirstOrDefault(d => d.ServiceType.ToString().Contains("IAuthenticationSchemeProvider"));
+                if (authService != null) services.Remove(authService);
+
+                // Add test authentication
+                services.PostConfigureAll<AuthenticationOptions>(options =>
+                {
+                    options.DefaultScheme = "Test";
+                    options.DefaultAuthenticateScheme = "Test";
+                    options.DefaultChallengeScheme = "Test";
+                });
+
+                services.AddAuthentication("Test")
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
             });
         });
     }
@@ -64,7 +84,7 @@ public class ControllerTests : IClassFixture<WebApplicationFactory<Program>>
         // Arrange
         var client = _factory.CreateClient();
         
-        var order = new OrderDto { ProductId = "TestItem", Quantity = 1, TotalPrice = 10.00m };
+        var order = new OrderDto { ProductId = 123, Quantity = 1, TotalPrice = 10.00m };
         var content = new StringContent(
             JsonSerializer.Serialize(order), Encoding.UTF8, "application/json");
 
@@ -79,14 +99,41 @@ public class ControllerTests : IClassFixture<WebApplicationFactory<Program>>
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.NotNull(createdOrder);
-        Assert.Equal("TestItem", createdOrder.ProductId);
+        Assert.Equal(123, createdOrder.ProductId);
     }
 }
 
 // Simple DTO for the test payload
 public class OrderDto
 {
-    public string ProductId { get; set; } = string.Empty;
+    public int ProductId { get; set; }
     public int Quantity { get; set; }
     public decimal TotalPrice { get; set; }
+}
+
+// Test authentication handler
+public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+    public TestAuthHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        System.Text.Encodings.Web.UrlEncoder encoder) 
+        : base(options, logger, encoder)
+    {
+    }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var claims = new[] 
+        {
+            new Claim(ClaimTypes.Name, "TestUser"),
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Role, "ADMIN")
+        };
+        var identity = new ClaimsIdentity(claims, "Test");
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "Test");
+
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
 }

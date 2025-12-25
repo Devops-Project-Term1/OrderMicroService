@@ -23,7 +23,7 @@ public class ServiceTests
         var service = new OrderService.Services.OrderService(context);
         var newOrder = new Order 
         { 
-            ProductId = "TestProduct", 
+            ProductId = 123, 
             Quantity = 10, 
             TotalPrice = 50.00m, 
             UserId = "user123" 
@@ -36,7 +36,7 @@ public class ServiceTests
         Assert.NotEqual(0, createdOrder.Id); // ID should be generated
         var savedOrder = await context.Orders.FindAsync(createdOrder.Id);
         Assert.NotNull(savedOrder);
-        Assert.Equal("TestProduct", savedOrder.ProductId);
+        Assert.Equal(123, savedOrder.ProductId);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class ServiceTests
         var service = new OrderService.Services.OrderService(context);
         
         // Seed an order
-        var orderToDelete = new Order { Id = 1, ProductId = "DeleteMe", Quantity = 1 };
+        var orderToDelete = new Order { Id = 1, ProductId = 456, Quantity = 1 };
         context.Orders.Add(orderToDelete);
         await context.SaveChangesAsync();
 
