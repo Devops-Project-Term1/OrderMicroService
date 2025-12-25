@@ -1,16 +1,19 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
-WORKDIR /app
+WORKDIR /src
 
 # Copy project file and restore dependencies (for better layer caching)
-COPY *.csproj ./
+COPY OrderService/OrderService.csproj ./OrderService/
+WORKDIR /src/OrderService
 RUN dotnet restore
 
 # Copy remaining source files
-COPY . ./
+WORKDIR /src
+COPY OrderService/ ./OrderService/
 
-# Build and publish in one stage
+# Build and publish
+WORKDIR /src/OrderService
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage
@@ -21,6 +24,9 @@ WORKDIR /app
 # Copy published application
 COPY --from=build /app/publish .
 
+# Environment variables
+ENV ASPNETCORE_URLS=http://+:8080
+
 # Run the application
 ENTRYPOINT ["dotnet", "OrderService.dll"]
-EXPOSE 5000 5001
+EXPOSE 8080
