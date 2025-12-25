@@ -34,7 +34,7 @@ jobs:
       working-directory: ./OrderService
     
     - name: Run unit tests
-      run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
       working-directory: ./OrderService.Tests
     
     - name: Upload test results
@@ -42,14 +42,14 @@ jobs:
       if: always()
       with:
         name: test-results
-        path: '**/test-results.trx'
+        path: 'OrderService.Tests/TestResults/*.trx'
     
     - name: Test Report
       uses: dorny/test-reporter@v1
       if: always()
       with:
         name: Test Results
-        path: '**/test-results.trx'
+        path: 'OrderService.Tests/TestResults/*.trx'
         reporter: 'dotnet-trx'
     
     - name: Code coverage
