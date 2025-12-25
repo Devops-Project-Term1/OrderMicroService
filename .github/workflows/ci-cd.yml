@@ -158,12 +158,4 @@ jobs:
     
     - name: Wait for deployment
       run: sleep 30
-    
-    - name: Health check
-      run: |
-        if [ -n "${{ secrets.RAILWAY_PRODUCTION_URL }}" ]; then
-          curl -f ${{ secrets.RAILWAY_PRODUCTION_URL }}/health || echo "Health check failed, but continuing..."
-        else
-          echo "No production URL configured, skipping health check"
-        fi
  
