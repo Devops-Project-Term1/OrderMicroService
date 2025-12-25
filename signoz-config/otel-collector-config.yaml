@@ -1,0 +1,60 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 10000
+    send_batch_max_size: 11000
+    timeout: 10s
+
+  # Memory limiter configuration
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 25
+
+  # Resource detection
+  resourcedetection:
+    detectors: [env, system, docker]
+    timeout: 5s
+
+  # Attributes processor for additional metadata
+  attributes:
+    actions:
+      - key: service.namespace
+        value: orderservice
+        action: insert
+
+exporters:
+  clickhouse:
+    datasource: tcp://clickhouse:9000/?database=signoz
+    ttl: 72h
+    traces_table_name: signoz_traces
+    logs_table_name: signoz_logs
+    metrics_table_name: signoz_metrics
+
+  # Logging exporter for debugging
+  logging:
+    loglevel: debug
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resourcedetection, attributes]
+      exporters: [clickhouse]
+    
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resourcedetection, attributes]
+      exporters: [clickhouse]
+    
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resourcedetection, attributes]
+      exporters: [clickhouse]

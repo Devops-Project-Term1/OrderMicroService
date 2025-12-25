@@ -8,7 +8,9 @@ namespace OrderService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-// [Authorize] // Requires a valid JWT for all endpoints
+#if !DEBUG
+[Authorize]
+#endif
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;

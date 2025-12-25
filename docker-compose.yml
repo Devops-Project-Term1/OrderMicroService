@@ -1,25 +1,35 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: orderservice-db
     environment:
       POSTGRES_USER: orderservice_user
       POSTGRES_PASSWORD: orderservice_password
-      POSTGRES_DB: orderservice_db
+      POSTGRES_DB: inventory_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U orderservice_user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - orderservice-network
 
+  # Jaeger for traces visualization (simpler alternative to SigNoz)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+    networks:
+      - orderservice-network
+
+  # OrderService Application
   orderservice:
     build:
       context: ./OrderService
@@ -28,15 +38,16 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=orderservice_db;Username=orderservice_user;Password=orderservice_password;"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=inventory_db;Username=orderservice_user;Password=orderservice_password"
       JwtSettings__SecretKey: "ThisIsASecretKeyThatShouldBeVeryLongAndSecure123!"
       JwtSettings__Issuer: "AuthService"
       JwtSettings__Audience: "OrderService"
+      OpenTelemetry__OtlpEndpoint: "http://jaeger:4317"
     ports:
       - "5000:5000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+      - jaeger
     networks:
       - orderservice-network
     restart: unless-stopped

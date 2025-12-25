@@ -31,10 +31,6 @@ WORKDIR /app
 # Copy published application
 COPY --from=publish /app/publish .
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
-
 # Run the application
 ENTRYPOINT ["dotnet", "OrderService.dll"]
 EXPOSE 5000 5001
