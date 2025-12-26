@@ -7,10 +7,20 @@ namespace OrderService.Services;
 public class OrderService : IOrderService
 {
     private readonly OrderDbContext _context;
+    private readonly IStockService _stockService;
+    private readonly IProductService _productService;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(OrderDbContext context)
+    public OrderService(
+        OrderDbContext context, 
+        IStockService stockService, 
+        IProductService productService,
+        ILogger<OrderService> logger)
     {
         _context = context;
+        _stockService = stockService;
+        _productService = productService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<Order>> GetAllOrdersAsync()
@@ -25,9 +35,38 @@ public class OrderService : IOrderService
 
     public async Task<Order> CreateOrderAsync(Order order)
     {
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-        return order;
+        // Validate product exists
+        var product = await _productService.GetProductByIdAsync(order.ProductId);
+        if (product == null)
+        {
+            throw new InvalidOperationException($"Product with ID {order.ProductId} not found");
+        }
+
+        // Check and reduce stock
+        var stockReduced = await _stockService.ReduceStockAsync(
+            order.ProductId, 
+            order.Quantity, 
+            $"Order created for product {order.ProductId}");
+        
+        if (!stockReduced)
+        {
+            throw new InvalidOperationException($"Insufficient stock for product {order.ProductId}");
+        }
+
+        try
+        {
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Order {OrderId} created successfully for product {ProductId}", order.Id, order.ProductId);
+            return order;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create order, attempting to rollback stock");
+            // Rollback stock on failure (add back the quantity)
+            await _stockService.ReduceStockAsync(order.ProductId, -order.Quantity, "Rollback: Order creation failed");
+            throw;
+        }
     }
 
     public async Task<Order?> UpdateOrderAsync(int id, Order order)
@@ -53,5 +92,10 @@ public class OrderService : IOrderService
         _context.Orders.Remove(order);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<IEnumerable<ProductDto>> GetAvailableProductsAsync()
+    {
+        return await _productService.GetAllProductsAsync();
     }
 }

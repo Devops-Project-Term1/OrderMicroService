@@ -18,6 +18,22 @@ builder.Services.AddDbContext<OrderDbContext>(options =>
 // 2. Register Services
 builder.Services.AddScoped<IOrderService, OrderService.Services.OrderService>();
 
+// HTTP Clients for inter-service communication
+var productServiceUrl = builder.Configuration["ServiceUrls:ProductService"] ?? "http://localhost:3000";
+var stockServiceUrl = builder.Configuration["ServiceUrls:StockService"] ?? "http://localhost:5000";
+
+builder.Services.AddHttpClient<IProductService, ProductService>(client =>
+{
+    client.BaseAddress = new Uri(productServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+builder.Services.AddHttpClient<IStockService, StockService>(client =>
+{
+    client.BaseAddress = new Uri(stockServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // 3. OpenTelemetry Configuration
 var serviceName = "OrderService";
 var serviceVersion = "1.0.0";

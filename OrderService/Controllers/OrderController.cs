@@ -9,10 +9,30 @@ namespace OrderService.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
+    private readonly ILogger<OrdersController> _logger;
 
-    public OrdersController(IOrderService orderService)
+    public OrdersController(IOrderService orderService, ILogger<OrdersController> logger)
     {
         _orderService = orderService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Get all available products from product service
+    /// </summary>
+    [HttpGet("products")]
+    public async Task<IActionResult> GetProducts()
+    {
+        try
+        {
+            var products = await _orderService.GetAvailableProductsAsync();
+            return Ok(products);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching products");
+            return StatusCode(500, new { error = "Failed to fetch products from product service" });
+        }
     }
 
     /// <summary>
@@ -42,8 +62,21 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Order order)
     {
-        var createdOrder = await _orderService.CreateOrderAsync(order);
-        return CreatedAtAction(nameof(GetById), new { id = createdOrder.Id }, createdOrder);
+        try
+        {
+            var createdOrder = await _orderService.CreateOrderAsync(order);
+            return CreatedAtAction(nameof(GetById), new { id = createdOrder.Id }, createdOrder);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid order creation attempt");
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating order");
+            return StatusCode(500, new { error = "Failed to create order" });
+        }
     }
 
     /// <summary>

@@ -9,4 +9,5 @@ public interface IOrderService
     Task<Order> CreateOrderAsync(Order order);
     Task<Order?> UpdateOrderAsync(int id, Order order);
     Task<bool> DeleteOrderAsync(int id);
+    Task<IEnumerable<ProductDto>> GetAvailableProductsAsync();
 }
