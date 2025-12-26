@@ -22,9 +22,9 @@ WORKDIR /app
 # Copy published application
 COPY --from=build /app/publish .
 
-# Environment variables
-ENV ASPNETCORE_URLS=http://+:8080
+# Environment variables - Railway will override PORT
+ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
 
 # Run the application
 ENTRYPOINT ["dotnet", "OrderService.dll"]
-EXPOSE 8080
+EXPOSE ${PORT:-8080}

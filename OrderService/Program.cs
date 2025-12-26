@@ -9,6 +9,10 @@ using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure port for Railway deployment
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // 1. Database Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -130,10 +134,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in production if not behind a reverse proxy (Railway handles HTTPS)
+// app.UseHttpsRedirection();
 
 // Middleware Pipeline
 app.UseCors();
+
+// Health check endpoint for Railway
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 // Controllers/Routes
 app.MapControllers();
