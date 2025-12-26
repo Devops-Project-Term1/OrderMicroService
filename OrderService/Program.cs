@@ -112,20 +112,24 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Apply migrations automatically on startup
-using (var scope = app.Services.CreateScope())
+// Apply migrations automatically on startup (non-blocking)
+Task.Run(async () =>
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        dbContext.Database.Migrate();
-        Console.WriteLine("Database migrations applied successfully.");
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+        try
+        {
+            await dbContext.Database.MigrateAsync();
+            Console.WriteLine("✅ Database migrations applied successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error applying migrations: {ex.Message}");
+            Console.WriteLine("Service will continue running, but database operations may fail.");
+        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error applying migrations: {ex.Message}");
-    }
-}
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

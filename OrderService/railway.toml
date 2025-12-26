@@ -4,5 +4,7 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "dotnet OrderService.dll"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
 restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
