@@ -90,19 +90,15 @@ builder.Logging.AddOpenTelemetry(logging =>
     });
 });
 
-// 5. CORS Configuration
+// 5. CORS Configuration - Allow all origins (no authentication required)
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5000")
-              .WithMethods("POST", "GET", "PUT", "PATCH", "DELETE")
-              .AllowAnyHeader()
-              .AllowCredentials();
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
-    options.AddPolicy("AllowBlazorApp",
-        policy => policy.WithOrigins("http://localhost:5001")
-            .AllowAnyMethod().AllowAnyHeader());
 });
 
 
@@ -111,8 +107,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
-app.UseCors("AllowBlazorApp");
 
 // Apply migrations automatically on startup
 using (var scope = app.Services.CreateScope())
