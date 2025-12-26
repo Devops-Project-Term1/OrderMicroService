@@ -2,7 +2,7 @@
 
 # OrderService API - CURL Commands
 # Base URL - Update this to match your environment
-BASE_URL="http://localhost:5247"
+BASE_URL="http://localhost:5247" 
 
 # JWT Token from Auth Service - Replace with your actual token
 TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"
