@@ -107,37 +107,36 @@ builder.Services.AddCors(options =>
 
 
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Apply migrations automatically on startup (non-blocking)
-Task.Run(async () =>
+// Skip automatic migrations on Railway to prevent startup delays
+// Run migrations manually: dotnet ef database update
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT")) || 
+    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")))
 {
+    Console.WriteLine("⚡ Running on Railway - skipping automatic migrations");
+    Console.WriteLine("💡 Database should already be migrated via deployment process");
+}
+else
+{
+    // Only run migrations in local development
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
         try
         {
-            await dbContext.Database.MigrateAsync();
+            dbContext.Database.Migrate();
             Console.WriteLine("✅ Database migrations applied successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"⚠️ Error applying migrations: {ex.Message}");
-            Console.WriteLine("Service will continue running, but database operations may fail.");
         }
     }
-});
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
 
+// Configure the HTTP request pipeline.
 // Only use HTTPS redirection in production if not behind a reverse proxy (Railway handles HTTPS)
 // app.UseHttpsRedirection();
 
